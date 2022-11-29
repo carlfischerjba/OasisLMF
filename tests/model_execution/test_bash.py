@@ -66,7 +66,9 @@ class Genbash(TestCase):
                 ri_alloc_rule=None,
                 bash_trace=None,
                 gul_legacy_stream=None,
-                fmpy=None):
+                fmpy=None,
+                get_getmodel_cmd=None,
+                ):
 
         input_filename = os.path.join(self.KPARSE_INPUT_FOLDER, "{}.json".format(name))
         if not num_reinsurance_iterations:
@@ -95,6 +97,7 @@ class Genbash(TestCase):
             bash_trace=(bash_trace or self.bash_trace),
             gul_legacy_stream=(gul_legacy_stream or self.gul_legacy_stream),
             fmpy=(fmpy or self.fmpy),
+            _get_getmodel_cmd=(get_getmodel_cmd or self.get_getmodel_cmd),
         )
 
     def gen_chunked_bash(self, name,
@@ -1067,6 +1070,35 @@ class Genbash_EventShuffle(Genbash):
         cls.bash_trace = False
         cls.stderr_guard = False
         cls.gul_legacy_stream = False
+
+        if os.path.exists(cls.KPARSE_OUTPUT_FOLDER):
+            shutil.rmtree(cls.KPARSE_OUTPUT_FOLDER)
+        os.makedirs(cls.KPARSE_OUTPUT_FOLDER)
+
+
+def custom_get_getmodel_cmd(**_kwargs):
+    return "foo"  # TODO
+
+
+class Genbash_CustomGulcalc(Genbash):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # test dirs
+        cls.KPARSE_INPUT_FOLDER = os.path.join(TEST_DIRECTORY, "kparse_input")
+        cls.KPARSE_OUTPUT_FOLDER = os.path.join(TEST_DIRECTORY, "custom_gulcalc_kparse_output")
+        cls.KPARSE_REFERENCE_FOLDER = os.path.join(TEST_DIRECTORY, "custom_gulcalc_kparse_reference")
+
+        cls.ri_iterations = 0
+        cls.gul_alloc_rule = 1
+        cls.il_alloc_rule = 2
+        cls.ri_alloc_rule = 3
+        cls.fifo_tmp_dir = False
+        cls.bash_trace = False
+        cls.stderr_guard = False
+        cls.gul_legacy_stream = False
+        # cls.get_getmodel_cmd = custom_get_getmodel_cmd  # doesn't work because bound function
+        cls.get_getmodel_cmd = lambda **kwargs: "foo"  # also doesn't work
 
         if os.path.exists(cls.KPARSE_OUTPUT_FOLDER):
             shutil.rmtree(cls.KPARSE_OUTPUT_FOLDER)
