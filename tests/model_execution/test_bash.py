@@ -36,19 +36,11 @@ class Genbash(TestCase):
         cls.stderr_guard = False
         cls.gul_legacy_stream = True
         cls.fmpy = False
+        cls.get_getmodel_cmd = None
 
         if os.path.exists(cls.KPARSE_OUTPUT_FOLDER):
             shutil.rmtree(cls.KPARSE_OUTPUT_FOLDER)
         os.makedirs(cls.KPARSE_OUTPUT_FOLDER)
-
-    def setUp(self):
-        self.temp_reference_file = None
-
-    def tearDown(self):
-        if self.temp_reference_file is not None:
-            # If already closed, no exception is raised
-            self.temp_reference_file.close()
-            os.remove(self.temp_reference_file.name)
 
     def md5(self, fname):
         hash_md5 = hashlib.md5()
@@ -110,7 +102,8 @@ class Genbash(TestCase):
                          ri_alloc_rule=None,
                          bash_trace=None,
                          gul_legacy_stream=None,
-                         fmpy=None):
+                         fmpy=None,
+                         get_getmodel_cmd=None):
 
         input_filename = os.path.join(self.KPARSE_INPUT_FOLDER, "{}.json".format(name))
         if not num_reinsurance_iterations:
@@ -138,6 +131,7 @@ class Genbash(TestCase):
             bash_trace=(bash_trace or self.bash_trace),
             gul_legacy_stream=(gul_legacy_stream or self.gul_legacy_stream),
             fmpy=(fmpy or self.fmpy),
+            _get_getmodel_cmd=(get_getmodel_cmd or self.get_getmodel_cmd),
         )
 
         # debug
@@ -1022,7 +1016,7 @@ class Genbash_FullCorrTempDir(Genbash):
         os.makedirs(cls.KPARSE_OUTPUT_FOLDER)
 
 
-class Genbash_LoadBanlancerFmpy(Genbash):
+class Genbash_LoadBalancerFmpy(Genbash):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -1076,10 +1070,6 @@ class Genbash_EventShuffle(Genbash):
         os.makedirs(cls.KPARSE_OUTPUT_FOLDER)
 
 
-def custom_get_getmodel_cmd(**_kwargs):
-    return "foo"  # TODO
-
-
 class Genbash_CustomGulcalc(Genbash):
     @classmethod
     def setUpClass(cls):
@@ -1089,16 +1079,21 @@ class Genbash_CustomGulcalc(Genbash):
         cls.KPARSE_OUTPUT_FOLDER = os.path.join(TEST_DIRECTORY, "custom_gulcalc_kparse_output")
         cls.KPARSE_REFERENCE_FOLDER = os.path.join(TEST_DIRECTORY, "custom_gulcalc_kparse_reference")
 
-        cls.ri_iterations = 0
-        cls.gul_alloc_rule = 1
-        cls.il_alloc_rule = 2
-        cls.ri_alloc_rule = 3
-        cls.fifo_tmp_dir = False
-        cls.bash_trace = False
-        cls.stderr_guard = False
-        cls.gul_legacy_stream = False
-        # cls.get_getmodel_cmd = custom_get_getmodel_cmd  # doesn't work because bound function
-        cls.get_getmodel_cmd = lambda **kwargs: "foo"  # also doesn't work
+        def custom_get_getmodel_cmd(
+            number_of_samples,
+            gul_threshold,
+            use_random_number_file,
+            coverage_output,
+            item_output,
+            process_id,
+            max_process_id,
+            gul_alloc_rule,
+            stderr_guard,
+            gul_legacy_stream=False,
+            **kwargs
+        ):
+            return f"custom_gulcalc {process_id} {max_process_id}"
+        cls.get_getmodel_cmd = staticmethod(custom_get_getmodel_cmd)
 
         if os.path.exists(cls.KPARSE_OUTPUT_FOLDER):
             shutil.rmtree(cls.KPARSE_OUTPUT_FOLDER)

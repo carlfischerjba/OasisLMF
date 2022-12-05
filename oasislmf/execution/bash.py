@@ -1,28 +1,24 @@
-from ..utils.defaults import (
-    KTOOLS_ALLOC_GUL_DEFAULT,
-    KTOOLS_ALLOC_IL_DEFAULT,
-    KTOOLS_ALLOC_RI_DEFAULT,
-    KTOOL_N_GUL_PER_LB,
-    KTOOL_N_FM_PER_LB,
-    EVE_DEFAULT_SHUFFLE,
-    EVE_NO_SHUFFLE,
-    EVE_ROUND_ROBIN,
-    EVE_FISHER_YATES,
-    EVE_STD_SHUFFLE,
-)
-from ..utils.exceptions import OasisException
-from collections import Counter
 import contextlib
 import io
 import logging
 import multiprocessing
 import os
-import pandas as pd
 import random
 import re
 import shutil
 import string
+from collections import Counter
 from functools import partial
+
+import pandas as pd
+
+from ..utils.defaults import (EVE_DEFAULT_SHUFFLE, EVE_FISHER_YATES,
+                              EVE_NO_SHUFFLE, EVE_ROUND_ROBIN, EVE_STD_SHUFFLE,
+                              KTOOL_N_FM_PER_LB, KTOOL_N_GUL_PER_LB,
+                              KTOOLS_ALLOC_GUL_DEFAULT,
+                              KTOOLS_ALLOC_IL_DEFAULT, KTOOLS_ALLOC_RI_DEFAULT)
+from ..utils.exceptions import OasisException
+
 logger = logging.getLogger(__name__)
 
 
@@ -1865,88 +1861,88 @@ def create_bash_analysis(
 
     # WARNING: this probably wont work well with the load balancer (needs guard/ edit)
     # for gul_id in range(1, num_gul_output + 1):
-    for gul_id in process_range(num_gul_output, process_number):
-        getmodel_args = {
-            'number_of_samples': number_of_samples,
-            'gul_threshold': gul_threshold,
-            'use_random_number_file': use_random_number_file,
-            'gul_alloc_rule': gul_alloc_rule,
-            'gul_legacy_stream': gul_legacy_stream,
-            'process_id': gul_id,
-            'max_process_id': num_gul_output,
-            'stderr_guard': stderr_guard,
-            'eve_shuffle_flag': eve_shuffle_flag,
-            'modelpy': modelpy,
-            'gulpy': gulpy,
-            'gulpy_random_generator': gulpy_random_generator,
-            'modelpy_server': model_py_server,
-            'peril_filter': peril_filter,
-        }
+    gul_id = "$1"
+    getmodel_args = {
+        'number_of_samples': number_of_samples,
+        'gul_threshold': gul_threshold,
+        'use_random_number_file': use_random_number_file,
+        'gul_alloc_rule': gul_alloc_rule,
+        'gul_legacy_stream': gul_legacy_stream,
+        'process_id': gul_id,
+        'max_process_id': num_gul_output,
+        'stderr_guard': stderr_guard,
+        'eve_shuffle_flag': eve_shuffle_flag,
+        'modelpy': modelpy,
+        'gulpy': gulpy,
+        'gulpy_random_generator': gulpy_random_generator,
+        'modelpy_server': model_py_server,
+        'peril_filter': peril_filter,
+    }
 
-        # GUL coverage & item stream (Older)
-        gul_fifo_name = get_fifo_name(fifo_queue_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
-        if gul_item_stream:
-            if need_summary_fifo_for_gul:
-                getmodel_args['coverage_output'] = ''
-                getmodel_args['item_output'] = '{} | tee {}'.format('-' * (not gulpy), gul_fifo_name)
-            else:
-                getmodel_args['coverage_output'] = ''
-                getmodel_args['item_output'] = '-' * (not gulpy)
-            _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_itm_cmd)
+    # GUL coverage & item stream (Older)
+    gul_fifo_name = get_fifo_name(fifo_queue_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
+    if gul_item_stream:
+        if need_summary_fifo_for_gul:
+            getmodel_args['coverage_output'] = ''
+            getmodel_args['item_output'] = '{} | tee {}'.format('-' * (not gulpy), gul_fifo_name)
         else:
-            if need_summary_fifo_for_gul:
-                getmodel_args['coverage_output'] = f'{gul_fifo_name}'
-                getmodel_args['item_output'] = '-'
-            elif gul_output:  # only gul direct stdout to summary
-                getmodel_args['coverage_output'] = '-'
-                getmodel_args['item_output'] = ''
-            else:  # direct stdout to il
-                getmodel_args['coverage_output'] = ''
-                getmodel_args['item_output'] = '-'
-            _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_cov_cmd)
+            getmodel_args['coverage_output'] = ''
+            getmodel_args['item_output'] = '-' * (not gulpy)
+        _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_itm_cmd)
+    else:
+        if need_summary_fifo_for_gul:
+            getmodel_args['coverage_output'] = f'{gul_fifo_name}'
+            getmodel_args['item_output'] = '-'
+        elif gul_output:  # only gul direct stdout to summary
+            getmodel_args['coverage_output'] = '-'
+            getmodel_args['item_output'] = ''
+        else:  # direct stdout to il
+            getmodel_args['coverage_output'] = ''
+            getmodel_args['item_output'] = '-'
+        _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_cov_cmd)
 
-        # gulcalc output file for fully correlated output
-        if full_correlation:
-            fc_gul_fifo_name = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
-            if need_summary_fifo_for_gul:  # need both stream for summary and tream for il
+    # gulcalc output file for fully correlated output
+    if full_correlation:
+        fc_gul_fifo_name = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
+        if need_summary_fifo_for_gul:  # need both stream for summary and tream for il
+            getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                                                consumer=RUNTYPE_FULL_CORRELATION)
+            if num_lb:
+                tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                            consumer=RUNTYPE_LOAD_BALANCED_LOSS)
+                tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} > {tee_output} &"
+                print_command(filename, tee_cmd)
+
+            else:
+                tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                            consumer=RUNTYPE_INSURED_LOSS)
+                tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} "
+                get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((tee_cmd, False))
+
+        elif gul_output:  # only gul direct correlated_output to summary
+            getmodel_args['correlated_output'] = fc_gul_fifo_name
+        else:
+            if num_lb:
                 getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                                                   consumer=RUNTYPE_FULL_CORRELATION)
-                if num_lb:
-                    tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                               consumer=RUNTYPE_LOAD_BALANCED_LOSS)
-                    tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} > {tee_output} &"
-                    print_command(filename, tee_cmd)
+                                                                    consumer=RUNTYPE_LOAD_BALANCED_LOSS)
 
-                else:
-                    tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                               consumer=RUNTYPE_INSURED_LOSS)
-                    tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} "
-                    get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((tee_cmd, False))
-
-            elif gul_output:  # only gul direct correlated_output to summary
-                getmodel_args['correlated_output'] = fc_gul_fifo_name
             else:
-                if num_lb:
-                    getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                                                       consumer=RUNTYPE_LOAD_BALANCED_LOSS)
+                getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                                                    consumer=RUNTYPE_FULL_CORRELATION)
+                get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((getmodel_args['correlated_output'], True))
 
-                else:
-                    getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                                                       consumer=RUNTYPE_FULL_CORRELATION)
-                    get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((getmodel_args['correlated_output'], True))
+    else:
+        getmodel_args['correlated_output'] = ''
 
-        else:
-            getmodel_args['correlated_output'] = ''
-
-        getmodel_args.update(custom_args)
-        getmodel_cmd = _get_getmodel_cmd(**getmodel_args)
-        if num_lb:  # print main_cmd_gul_stream, get_gul_stream_cmds will be updated after by the main lb block
-            main_cmd_gul_stream = get_main_cmd_gul_stream(
-                getmodel_cmd, gul_id, fifo_queue_dir, stderr_guard, RUNTYPE_LOAD_BALANCED_LOSS
-            )
-            print_command(filename, main_cmd_gul_stream)
-        else:
-            get_gul_stream_cmds.setdefault(fifo_queue_dir, []).append((getmodel_cmd, False))
+    getmodel_args.update(custom_args)
+    getmodel_cmd = _get_getmodel_cmd(**getmodel_args)
+    if num_lb:  # print main_cmd_gul_stream, get_gul_stream_cmds will be updated after by the main lb block
+        main_cmd_gul_stream = get_main_cmd_gul_stream(
+            getmodel_cmd, gul_id, fifo_queue_dir, stderr_guard, RUNTYPE_LOAD_BALANCED_LOSS
+        )
+        print_command(filename, main_cmd_gul_stream)
+    else:
+        get_gul_stream_cmds.setdefault(fifo_queue_dir, []).append((getmodel_cmd, False))
 
     if num_lb:  # create load balancer cmds
         for fifo_dir in fifo_dirs:
