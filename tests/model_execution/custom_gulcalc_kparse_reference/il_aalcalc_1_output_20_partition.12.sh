@@ -31,7 +31,7 @@ tee < fifo/il_S1_summary_P13 work/il_S1_summaryaalcalc/P13.bin > /dev/null & pid
 tee < fifo/il_S1_summary_P13.idx work/il_S1_summaryaalcalc/P13.idx > /dev/null & pid2=$!
 summarycalc -m -f  -1 fifo/il_S1_summary_P13 < fifo/il_P13 &
 
-eve 13 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P13  &
+custom_gulcalc 13 20 | fmcalc -a2 > fifo/il_P13  &
 
 wait $pid1 $pid2
 

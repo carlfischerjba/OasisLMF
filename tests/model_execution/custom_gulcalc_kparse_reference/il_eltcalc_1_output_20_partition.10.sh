@@ -30,7 +30,7 @@ eltcalc -s < fifo/il_S1_eltcalc_P11 > work/kat/il_S1_eltcalc_P11 & pid1=$!
 tee < fifo/il_S1_summary_P11 fifo/il_S1_eltcalc_P11 > /dev/null & pid2=$!
 summarycalc -m -f  -1 fifo/il_S1_summary_P11 < fifo/il_P11 &
 
-eve 11 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P11  &
+custom_gulcalc 11 20 | fmcalc -a2 > fifo/il_P11  &
 
 wait $pid1 $pid2
 

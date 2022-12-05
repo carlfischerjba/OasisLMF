@@ -167,26 +167,26 @@ summarycalc -m -f  -1 fifo/il_S1_summary_P18 < fifo/il_P18 &
 summarycalc -m -f  -1 fifo/il_S1_summary_P19 < fifo/il_P19 &
 summarycalc -m -f  -1 fifo/il_S1_summary_P20 < fifo/il_P20 &
 
-eve 1 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P1  &
-eve 2 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P2  &
-eve 3 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P3  &
-eve 4 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P4  &
-eve 5 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P5  &
-eve 6 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P6  &
-eve 7 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P7  &
-eve 8 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P8  &
-eve 9 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P9  &
-eve 10 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P10  &
-eve 11 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P11  &
-eve 12 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P12  &
-eve 13 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P13  &
-eve 14 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P14  &
-eve 15 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P15  &
-eve 16 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P16  &
-eve 17 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P17  &
-eve 18 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P18  &
-eve 19 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P19  &
-eve 20 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P20  &
+custom_gulcalc 1 20 | fmcalc -a2 > fifo/il_P1  &
+custom_gulcalc 2 20 | fmcalc -a2 > fifo/il_P2  &
+custom_gulcalc 3 20 | fmcalc -a2 > fifo/il_P3  &
+custom_gulcalc 4 20 | fmcalc -a2 > fifo/il_P4  &
+custom_gulcalc 5 20 | fmcalc -a2 > fifo/il_P5  &
+custom_gulcalc 6 20 | fmcalc -a2 > fifo/il_P6  &
+custom_gulcalc 7 20 | fmcalc -a2 > fifo/il_P7  &
+custom_gulcalc 8 20 | fmcalc -a2 > fifo/il_P8  &
+custom_gulcalc 9 20 | fmcalc -a2 > fifo/il_P9  &
+custom_gulcalc 10 20 | fmcalc -a2 > fifo/il_P10  &
+custom_gulcalc 11 20 | fmcalc -a2 > fifo/il_P11  &
+custom_gulcalc 12 20 | fmcalc -a2 > fifo/il_P12  &
+custom_gulcalc 13 20 | fmcalc -a2 > fifo/il_P13  &
+custom_gulcalc 14 20 | fmcalc -a2 > fifo/il_P14  &
+custom_gulcalc 15 20 | fmcalc -a2 > fifo/il_P15  &
+custom_gulcalc 16 20 | fmcalc -a2 > fifo/il_P16  &
+custom_gulcalc 17 20 | fmcalc -a2 > fifo/il_P17  &
+custom_gulcalc 18 20 | fmcalc -a2 > fifo/il_P18  &
+custom_gulcalc 19 20 | fmcalc -a2 > fifo/il_P19  &
+custom_gulcalc 20 20 | fmcalc -a2 > fifo/il_P20  &
 
 wait $pid1 $pid2 $pid3 $pid4 $pid5 $pid6 $pid7 $pid8 $pid9 $pid10 $pid11 $pid12 $pid13 $pid14 $pid15 $pid16 $pid17 $pid18 $pid19 $pid20 $pid21 $pid22 $pid23 $pid24 $pid25 $pid26 $pid27 $pid28 $pid29 $pid30 $pid31 $pid32 $pid33 $pid34 $pid35 $pid36 $pid37 $pid38 $pid39 $pid40
 

@@ -30,7 +30,7 @@ pltcalc -H < fifo/il_S1_pltcalc_P15 > work/kat/il_S1_pltcalc_P15 & pid1=$!
 tee < fifo/il_S1_summary_P15 fifo/il_S1_pltcalc_P15 > /dev/null & pid2=$!
 summarycalc -m -f  -1 fifo/il_S1_summary_P15 < fifo/il_P15 &
 
-eve 15 20 | getmodel | gulcalc -S100 -L100 -r -i - | fmcalc -a2 > fifo/il_P15  &
+custom_gulcalc 15 20 | fmcalc -a2 > fifo/il_P15  &
 
 wait $pid1 $pid2
 
