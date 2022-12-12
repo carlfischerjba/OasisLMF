@@ -97,7 +97,8 @@ tee < fifo/gul_S1_summary_P1 fifo/gul_S1_summarycalc_P1 > /dev/null & pid2=$!
 
 ( summarycalc -m -i  -1 fifo/gul_S1_summary_P1 < fifo/gul_P1 ) 2>> $LOG_DIR/stderror.err  &
 
-( custom_gulcalc > fifo/gul_P1  ) 2>> $LOG_DIR/stderror.err &
+source parallel.sh  # TODO what's the correct path?
+seq 1 1 | parallel --halt now,fail=1 "./custom_gul_summarycalc_1_output_1_partition.gulcalc.sh {} $LOG_DIR"
 
 wait $pid1 $pid2
 
