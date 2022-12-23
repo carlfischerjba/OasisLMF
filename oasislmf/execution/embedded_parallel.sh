@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-# Copyright (C) 2007-2022 carlfischer@jbanorthwest.co.uk, Ole Tange, http://ole.tange.dk
+# Copyright (C) 2007-2022 joncrane@jbanorthwest.co.uk, Ole Tange, http://ole.tange.dk
 # and Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -41,7 +41,7 @@ parallel() {
     # Put source code into temporary file
     # so it is easy to copy to the fifo
     _file_with_GNU_Parallel_source=`mktemp`;
-cat <<'cut-here-ACd1gGOzB9dgJrA5q7hg' > $_file_with_GNU_Parallel_source
+cat <<'cut-here-PkTgCBtH0iyvlrQXAYyd' > $_file_with_GNU_Parallel_source
 #!/usr/bin/env perl
 
 # Copyright (C) 2007-2022 Ole Tange, http://ole.tange.dk and Free
@@ -124,7 +124,7 @@ sub set_input_source_header($$) {
 	for my $s (@opt::a) {
 	    # ::: are put into files and given a filehandle
 	    # ignore these and only keep the filenames.
-	    fileno $s and next;	    
+	    fileno $s and next;
 	    for(@$command_ref, @Global::ret_files,
 		@Global::transfer_files, $opt::tagstring,
 		$opt::workdir, $opt::results, $opt::retries,
@@ -14822,7 +14822,7 @@ sub main() {
 }
 
 main();
-cut-here-ACd1gGOzB9dgJrA5q7hg
+cut-here-PkTgCBtH0iyvlrQXAYyd
 
     # Copy the source code from the file to the fifo
     # and remove the file and fifo ASAP
@@ -15267,3 +15267,5 @@ _parset_main() {
 }
 
 
+echo "setting up GNU parallel"
+# Call the run_ktools.sh script after setting up GNU Parallel

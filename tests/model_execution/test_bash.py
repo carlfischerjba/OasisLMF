@@ -9,7 +9,8 @@ from unittest import TestCase
 
 from oasislmf.model_execution.bash import (bash_params, bash_wrapper,
                                            create_bash_analysis,
-                                           create_bash_outputs, genbash)
+                                           create_bash_outputs,
+                                           create_loss_calc_file, genbash)
 from oasislmf.utils import diff
 
 TEST_DIRECTORY = os.path.dirname(__file__)
@@ -943,11 +944,12 @@ class Genbash_ErrorGuard(Genbash):
         return "custom_gulcalc"
 
     def test_custom_gul_summarycalc_1_partition(self):
+        # JC NOTE: Change this test back to 1 from 4
         self.genbash("custom_gul_summarycalc_1_output", 1, _get_getmodel_cmd=self._get_getmodel_cmd)
         self.check("custom_gul_summarycalc_1_output_1_partition")
 
     def test_custom_gul_summarycalc_1_partition_chunk(self):
-        self.gen_chunked_bash("custom_gul_summarycalc_1_output", 1, _get_getmodel_cmd=self._get_getmodel_cmd)
+        self.gen_chunked_bash("custom_gul_summarycalc_`1_output", 1, _get_getmodel_cmd=self._get_getmodel_cmd)
         self.check_chunks("custom_gul_summarycalc_1_output_1_partition", 1)
 
 
@@ -1095,3 +1097,35 @@ class Genbash_EventShuffle(Genbash):
         if os.path.exists(cls.KPARSE_OUTPUT_FOLDER):
             shutil.rmtree(cls.KPARSE_OUTPUT_FOLDER)
         os.makedirs(cls.KPARSE_OUTPUT_FOLDER)
+
+class Test_Create_Loss_Calculation(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # test dirs
+        cls.OUTPUT_FOLDER = os.path.join(TEST_DIRECTORY, "loss_calculation_output")
+        cls.REFERENCE_FOLDER = os.path.join(TEST_DIRECTORY, "loss_calculation_reference")
+
+    def check(self, reference_filename, output_filename):
+        d = diff.unified_diff(reference_filename, output_filename, as_string=True)
+        if d:
+            self.fail(d)
+
+    def recreate_loss_calc_file(self, filename, loss_cmd):
+        """Deletes the file if it exists and then creates a new one.
+
+        :param filename: The name of the file to write the commands to
+        :param gul_cmd: The command that runs the  loss calculation.
+        """
+
+        if os.path.exists(filename):
+            os.remove(filename)
+        create_loss_calc_file(filename, loss_cmd)
+
+    def test_create_loss_calc_file(self):
+        filename = "run_loss_calc.sh"
+        command = "custom_loss_calculation"
+        print(os.path.join(self.OUTPUT_FOLDER, filename))
+        self.recreate_loss_calc_file(os.path.join(self.OUTPUT_FOLDER, filename), command)
+
+        self.check(os.path.join(self.OUTPUT_FOLDER, filename),
+                   os.path.join(self.REFERENCE_FOLDER, filename))

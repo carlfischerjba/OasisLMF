@@ -22,6 +22,7 @@ from ..utils.exceptions import OasisException
 logger = logging.getLogger(__name__)
 
 
+LOSSCALC_SHELL_SCRIPT_SUFFIX = 'losscalc'
 RUNTYPE_GROUNDUP_LOSS = 'gul'
 RUNTYPE_LOAD_BALANCED_LOSS = 'lb'
 RUNTYPE_INSURED_LOSS = 'il'
@@ -213,6 +214,50 @@ else
     echo "WARNING: logging disabled, bash version '$BASH_VERSION' is not supported, minimum requirement is bash v4.4"
 fi """
 
+# JC NOTE: Not sure exactly where the best place to call this function is. I'm going to guess and just throw it in create_bash_analysis()
+def create_parallel_shell_script(ktools_filename):
+    """Copies the shell script for parallel into the same working direcotry as run_ktools.sh
+    :param ktools_filename: The full filepath to the run_ktools.sh script"""
+
+    parallel_path_old = os.path.dirname(os.path.realpath(__file__)) + "/embedded_parallel.sh"
+    parallel_path_new = os.path.dirname(os.path.realpath(__file__)) + "/ktools_via_parallel.sh"
+    shutil.copyfile(parallel_path_old, parallel_path_new)
+    # Add a command at the bottom of this file to call the run_ktools.sh script.
+    run_ktools_cmd = f"./{os.path.basename(ktools_filepath)}"
+    print_command (parallel_path_new,run_ktools_cmd)
+
+
+def get_loss_calc_filename_from_ktools_filepath(ktools_filepath):
+    # Get filename without filetype
+    loss_calc_filename = os.path.splitext(os.path.basename(ktools_filepath))[0]
+    # Add the suffix onto the filename
+    return loss_calc_filename + "." + LOSSCALC_SHELL_SCRIPT_SUFFIX + ".sh"
+
+def get_loss_calc_filepath_from_ktools_filepath(ktools_filepath):
+    """Calculates the full filepath for the gulcalc shell script from the ktools filepath.
+
+    :param ktools_filepath: The path to the run_ktools.sh script
+    """
+    loss_calc_filepath = os.path.relpath(str(os.path.dirname(os.path.abspath(ktools_filepath))), os.getcwd())
+
+    return loss_calc_filepath + get_loss_calc_filename_from_ktools_filepath(ktools_filepath)
+
+def create_loss_calc_file(ktools_filepath, loss_cmd):
+    """Creates a shell script to run a single loss calculation process.
+
+    :param filename: The name of the file to write the commands to
+    :param gul_cmd: The command that runs the  loss calculation.
+    """
+    loss_calc_filepath = get_loss_calc_filepath_from_ktools_filepath(ktools_filepath)
+    print_command(loss_calc_filepath, '#!/bin/bash')
+    print_command(loss_calc_filepath, 'set -euET -o pipefail')
+    # No warning as one is already provided by run_ktools.sh
+    print_command(loss_calc_filepath, 'shopt -s inherit_errexit 2>/dev/null')
+    # print_command(loss_calc_filepath, 'echo "Running gul_calc.sh $1 $2"')
+    print_command(loss_calc_filepath, loss_cmd)
+    # print_command(loss_calc_filepath, 'echo "Finished gul_calc.sh $1 $2"')
+    return
+
 
 def process_range(max_process_id, process_number=None):
     """
@@ -294,6 +339,7 @@ def print_command(command_file, cmd):
     :param command_file: File to append command to.
     :param cmd: The command to append
     """
+    # print(f"cmd: {cmd}") #JC NOTE: Remove this
     with io.open(command_file, "a", encoding='utf-8') as myfile:
         myfile.writelines(cmd + "\n")
 
@@ -1338,6 +1384,34 @@ def get_main_cmd_gul_stream(
 
     return main_cmd
 
+def get_main_cmd_gul_stream_parallel(
+    cmd,
+    fifo_dir='fifo/',
+    stderr_guard=True,
+    consumer='',
+):
+    """
+    Gets the command to output ground up losses which uses GNU parallel
+    :param cmd: either gulcalc command stream or correlated output file
+    :type cmd: str
+    :param process_id: ID corresponding to thread
+    :type process_id: int
+    :param fifo_dir: path to fifo directory
+    :type fifo_dir: str
+    :param stderr_guard: send stderr output to log file
+    :type stderr_guard: bool
+    :param consumer: optional name of the consumer of the stream
+    :type consumer: string
+    :return: generated command as str
+    """
+
+    process_id="$1" #JC NOTE: This needs tidying up and removing as a funciton input
+    gul_fifo_name = get_fifo_name(fifo_dir, RUNTYPE_GROUNDUP_LOSS, process_id, consumer)
+    main_cmd = f'{cmd} > {gul_fifo_name} '
+    main_cmd = f'( {main_cmd} ) 2>> $2/stderror.err &' if stderr_guard else f'{main_cmd}'
+
+    return main_cmd
+
 
 def get_complex_model_cmd(custom_gulcalc_cmd, analysis_settings):
     # If `given_gulcalc_cmd` is set then always run as a complex model
@@ -1696,6 +1770,8 @@ def create_bash_analysis(
     gul_legacy_stream=False,
     **kwargs
 ):
+    # saved_args = locals()
+    # print("saved_args is", saved_args)
 
     process_counter = process_counter or Counter()
     custom_args = custom_args or {}
@@ -1897,91 +1973,114 @@ def create_bash_analysis(
     # create all gul streams
     get_gul_stream_cmds = {}
 
+    ################################################################
+    # JC NOTE here is where the lines you care about seem to start
+    ################################################################
+
     # WARNING: this probably wont work well with the load balancer (needs guard/ edit)
     # for gul_id in range(1, num_gul_output + 1):
-    gul_id = "$1"
-    getmodel_args = {
-        'number_of_samples': number_of_samples,
-        'gul_threshold': gul_threshold,
-        'use_random_number_file': use_random_number_file,
-        'gul_alloc_rule': gul_alloc_rule,
-        'gul_legacy_stream': gul_legacy_stream,
-        'process_id': gul_id,
-        'max_process_id': num_gul_output,
-        'stderr_guard': stderr_guard,
-        'eve_shuffle_flag': eve_shuffle_flag,
-        'modelpy': modelpy,
-        'gulpy': gulpy,
-        'gulpy_random_generator': gulpy_random_generator,
-        'modelpy_server': model_py_server,
-        'peril_filter': peril_filter,
-    }
+    # gul_id = "$1"f
+    # print(num_gul_output)
+    # print(process_number)
+    # raise
 
-    # GUL coverage & item stream (Older)
-    gul_fifo_name = get_fifo_name(fifo_queue_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
-    if gul_item_stream:
-        if need_summary_fifo_for_gul:
-            getmodel_args['coverage_output'] = ''
-            getmodel_args['item_output'] = '{} | tee {}'.format('-' * (not gulpy), gul_fifo_name)
-        else:
-            getmodel_args['coverage_output'] = ''
-            getmodel_args['item_output'] = '-' * (not gulpy)
-        _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_itm_cmd)
-    else:
-        if need_summary_fifo_for_gul:
-            getmodel_args['coverage_output'] = f'{gul_fifo_name}'
-            getmodel_args['item_output'] = '-'
-        elif gul_output:  # only gul direct stdout to summary
-            getmodel_args['coverage_output'] = '-'
-            getmodel_args['item_output'] = ''
-        else:  # direct stdout to il
-            getmodel_args['coverage_output'] = ''
-            getmodel_args['item_output'] = '-'
-        _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_cov_cmd)
+    # JC NOTE: This section can probably have the loop removed.
+    # print(num_gul_output)
+    # print(process_number)
+    # raise
+    # print(num_gul_output)
+    # print(process_number)
+    # raise
+    for gul_id in process_range(num_gul_output, process_number):
+        getmodel_args = {
+            'number_of_samples': number_of_samples,
+            'gul_threshold': gul_threshold,
+            'use_random_number_file': use_random_number_file,
+            'gul_alloc_rule': gul_alloc_rule,
+            'gul_legacy_stream': gul_legacy_stream,
+            'process_id': gul_id,
+            'max_process_id': num_gul_output,
+            'stderr_guard': stderr_guard,
+            'eve_shuffle_flag': eve_shuffle_flag,
+            'modelpy': modelpy,
+            'gulpy': gulpy,
+            'gulpy_random_generator': gulpy_random_generator,
+            'modelpy_server': model_py_server,
+            'peril_filter': peril_filter,
+        }
 
-    # gulcalc output file for fully correlated output
-    if full_correlation:
-        fc_gul_fifo_name = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
-        if need_summary_fifo_for_gul:  # need both stream for summary and tream for il
-            getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                                                consumer=RUNTYPE_FULL_CORRELATION)
-            if num_lb:
-                tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                            consumer=RUNTYPE_LOAD_BALANCED_LOSS)
-                tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} > {tee_output} &"
-                print_command(filename, tee_cmd)
-
+        # GUL coverage & item stream (Older)
+        gul_fifo_name = get_fifo_name(fifo_queue_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
+        if gul_item_stream:
+            if need_summary_fifo_for_gul:
+                getmodel_args['coverage_output'] = ''
+                getmodel_args['item_output'] = '{} | tee {}'.format('-' * (not gulpy), gul_fifo_name)
             else:
-                tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                            consumer=RUNTYPE_INSURED_LOSS)
-                tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} "
-                get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((tee_cmd, False))
-
-        elif gul_output:  # only gul direct correlated_output to summary
-            getmodel_args['correlated_output'] = fc_gul_fifo_name
+                getmodel_args['coverage_output'] = ''
+                getmodel_args['item_output'] = '-' * (not gulpy)
+            _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_itm_cmd)
         else:
-            if num_lb:
-                getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
-                                                                    consumer=RUNTYPE_LOAD_BALANCED_LOSS)
+            if need_summary_fifo_for_gul:
+                getmodel_args['coverage_output'] = f'{gul_fifo_name}'
+                getmodel_args['item_output'] = '-'
+            elif gul_output:  # only gul direct stdout to summary
+                getmodel_args['coverage_output'] = '-'
+                getmodel_args['item_output'] = ''
+            else:  # direct stdout to il
+                getmodel_args['coverage_output'] = ''
+                getmodel_args['item_output'] = '-'
+            _get_getmodel_cmd = (_get_getmodel_cmd or get_getmodel_cov_cmd)
 
-            else:
+        # gulcalc output file for fully correlated output
+        if full_correlation:
+            fc_gul_fifo_name = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id)
+            if need_summary_fifo_for_gul:  # need both stream for summary and tream for il
                 getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
                                                                     consumer=RUNTYPE_FULL_CORRELATION)
-                get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((getmodel_args['correlated_output'], True))
+                if num_lb:
+                    tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                                consumer=RUNTYPE_LOAD_BALANCED_LOSS)
+                    tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} > {tee_output} &"
+                    print_command(filename, tee_cmd)
 
-    else:
-        getmodel_args['correlated_output'] = ''
+                else:
+                    tee_output = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                                consumer=RUNTYPE_INSURED_LOSS)
+                    tee_cmd = f"tee < {getmodel_args['correlated_output']} {fc_gul_fifo_name} "
+                    get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((tee_cmd, False))
 
-    getmodel_args.update(custom_args)
-    getmodel_cmd = _get_getmodel_cmd(**getmodel_args)
-    if num_lb:  # print main_cmd_gul_stream, get_gul_stream_cmds will be updated after by the main lb block
-        main_cmd_gul_stream = get_main_cmd_gul_stream(
-            getmodel_cmd, gul_id, fifo_queue_dir, stderr_guard, RUNTYPE_LOAD_BALANCED_LOSS
-        )
-        print_command(filename, main_cmd_gul_stream)
-    else:
-        get_gul_stream_cmds.setdefault(fifo_queue_dir, []).append((getmodel_cmd, False))
+            elif gul_output:  # only gul direct correlated_output to summary
+                getmodel_args['correlated_output'] = fc_gul_fifo_name
+            else:
+                if num_lb:
+                    getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                                                        consumer=RUNTYPE_LOAD_BALANCED_LOSS)
 
+                else:
+                    getmodel_args['correlated_output'] = get_fifo_name(fifo_full_correlation_dir, RUNTYPE_GROUNDUP_LOSS, gul_id,
+                                                                        consumer=RUNTYPE_FULL_CORRELATION)
+                    get_gul_stream_cmds.setdefault(fifo_full_correlation_dir, []).append((getmodel_args['correlated_output'], True))
+
+        else:
+            getmodel_args['correlated_output'] = ''
+
+        getmodel_args.update(custom_args)
+        getmodel_cmd = _get_getmodel_cmd(**getmodel_args)
+
+        # JC NOTE: need to check this again when you get it working for num_lb=0 aka no load balancing
+        if num_lb:  # print main_cmd_gul_stream, get_gul_stream_cmds will be updated after by the main lb block
+            main_cmd_gul_stream = get_main_cmd_gul_stream(
+                getmodel_cmd, gul_id, fifo_queue_dir, stderr_guard, RUNTYPE_LOAD_BALANCED_LOSS
+            )
+            # print(main_cmd_gul_stream)
+            # raise
+            print_command(filename, main_cmd_gul_stream)
+        else:
+            get_gul_stream_cmds.setdefault(fifo_queue_dir, []).append((getmodel_cmd, False))
+            # print(get_gul_stream_cmds)
+            # raise
+
+    # JC NOTE: This does some load balancer stuff I don't understand
     if num_lb:  # create load balancer cmds
         for fifo_dir in fifo_dirs:
             get_gul_stream_cmds[fifo_dir] = [
@@ -2012,15 +2111,34 @@ def create_bash_analysis(
     else:
         step_flag = ' -S'
 
-    for fifo_dir, gul_streams in get_gul_stream_cmds.items():
-        for i, (getmodel_cmd, from_file) in enumerate(gul_streams):
+    # print(type(get_gul_stream_cmds))
+    # print(get_gul_stream_cmds)
+    # print(get_gul_stream_cmds.items())
+    # raise
 
+    # Get relative (to current working dir) path to source parallel.sh
+    ## JC NOTE: This works but it will fail on unit testing as the filepath is absolute
+    parallel_cmd = "source "
+    parallel_cmd += str(os.path.relpath(os.path.dirname(os.path.abspath(__file__)),os.getcwd()))
+    parallel_cmd += "/parallel.sh"
+
+    # JC NOTE: This line will need updating for the different number of processes
+
+    # print_command(filename, parallel_cmd)
+    # print(get_gul_stream_cmds)
+    # raise
+    for fifo_dir, gul_streams in get_gul_stream_cmds.items():
+        # for i, (getmodel_cmd, from_file) in enumerate(gul_streams):
+
+            # JC NOTE: Need to figure out how to handle the case when process number is != None
             # THIS NEEDS EDIT - temp workaround for dist work chunk
-            if process_number is not None:
-                process_id = process_number
-            else:
-                process_id = i + 1
+            # if process_number is not None:
+            #     process_id = process_number
+            # else:
+            #     process_id = i + 1
             #######################################################
+
+            number_of_processes = len(gul_streams)
 
             if ri_output:
                 main_cmd = get_main_cmd_ri_stream(
@@ -2053,10 +2171,15 @@ def create_bash_analysis(
                 print_command(filename, main_cmd)
 
             else:
-                main_cmd = get_main_cmd_gul_stream(
-                    getmodel_cmd, process_id, fifo_dir, stderr_guard
+                main_cmd = get_main_cmd_gul_stream_parallel(
+                    getmodel_cmd, fifo_dir, stderr_guard
                 )
-                print_command(filename, main_cmd)
+                create_loss_calc_file(filename, main_cmd)
+                # print(filename)
+                # print(main_cmd)
+                parallel_cmd = f'seq 1 {number_of_processes} | parallel --halt now,fail=1 --joblog gul_parallel_processes.log "./{get_loss_calc_filename_from_ktools_filepath(filename)} {{}} $LOG_DIR"'
+                print_command(filename, parallel_cmd) # JC NOTE: This is the line that is used in the first test to wite the gulcalc
+
 
     print_command(filename, '')
     do_pwaits(filename, process_counter)
