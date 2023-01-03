@@ -15,28 +15,27 @@ __all__ = [
 ]
 
 
-import errno
 import csv
+import errno
 import filecmp
 import glob
 import logging
 import os
 import re
 import shutil
-import shutilwhich
 import subprocess
 import tarfile
-import pandas as pd
-
 from itertools import chain
-
 from pathlib import Path
 
+import pandas as pd
+import shutilwhich
+
+from ..utils.defaults import STATIC_DATA_FP
 from ..utils.exceptions import OasisException
 from ..utils.log import oasis_log
-from ..utils.defaults import STATIC_DATA_FP
-from .files import TAR_FILE, INPUT_FILES, GUL_INPUT_FILES, IL_INPUT_FILES
-from .bash import leccalc_enabled, ord_enabled, ORD_LECCALC
+from .bash import ORD_LECCALC, leccalc_enabled, ord_enabled
+from .files import GUL_INPUT_FILES, IL_INPUT_FILES, INPUT_FILES, TAR_FILE
 
 
 @oasis_log

@@ -21,7 +21,7 @@ def run(analysis_settings,
         custom_gulcalc_log_start=None,
         custom_gulcalc_log_finish=None,
         custom_get_getmodel_cmd=None,
-        filename='run_ktools.sh',
+        filename='ktools_via_parallel.sh',
         gul_legacy_stream=False,
         **kwargs
         ):

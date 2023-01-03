@@ -219,12 +219,14 @@ def create_parallel_shell_script(ktools_filename):
     """Copies the shell script for parallel into the same working direcotry as run_ktools.sh
     :param ktools_filename: The full filepath to the run_ktools.sh script"""
 
+    # Calculate the paths for the location of the script to copy relative to this file.
     parallel_path_old = os.path.dirname(os.path.realpath(__file__)) + "/embedded_parallel.sh"
-    parallel_path_new = os.path.dirname(os.path.realpath(__file__)) + "/ktools_via_parallel.sh"
+    # The parallel script is placed into the same directory as the run_ktools.sh script
+    parallel_path_new = os.path.dirname(os.path.realpath(ktools_filename)) + "/ktools_via_parallel.sh"
     shutil.copyfile(parallel_path_old, parallel_path_new)
     # Add a command at the bottom of this file to call the run_ktools.sh script.
-    run_ktools_cmd = f"./{os.path.basename(ktools_filepath)}"
-    print_command (parallel_path_new,run_ktools_cmd)
+    run_ktools_cmd = f"./{os.path.basename(ktools_filename)}"
+    print_command(parallel_path_new, run_ktools_cmd)
 
 
 def get_loss_calc_filename_from_ktools_filepath(ktools_filepath):
@@ -253,9 +255,9 @@ def create_loss_calc_file(ktools_filepath, loss_cmd):
     print_command(loss_calc_filepath, 'set -euET -o pipefail')
     # No warning as one is already provided by run_ktools.sh
     print_command(loss_calc_filepath, 'shopt -s inherit_errexit 2>/dev/null')
-    # print_command(loss_calc_filepath, 'echo "Running gul_calc.sh $1 $2"')
+    # print_command(loss_calc_filepath, 'echo "Running gul_calc.sh $1 $2"') # JC NOTE: prob done want this line when testing is done
     print_command(loss_calc_filepath, loss_cmd)
-    # print_command(loss_calc_filepath, 'echo "Finished gul_calc.sh $1 $2"')
+    # print_command(loss_calc_filepath, 'echo "Finished gul_calc.sh $1 $2"') # JC NOTE: prob done want this line when testing is done
     return
 
 
@@ -1772,6 +1774,9 @@ def create_bash_analysis(
 ):
     # saved_args = locals()
     # print("saved_args is", saved_args)
+
+    # Write the GNU Parallel file that will call this one
+    create_parallel_shell_script(filename)
 
     process_counter = process_counter or Counter()
     custom_args = custom_args or {}

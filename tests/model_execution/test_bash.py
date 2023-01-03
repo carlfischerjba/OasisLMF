@@ -10,7 +10,9 @@ from unittest import TestCase
 from oasislmf.model_execution.bash import (bash_params, bash_wrapper,
                                            create_bash_analysis,
                                            create_bash_outputs,
-                                           create_loss_calc_file, genbash)
+                                           create_loss_calc_file,
+                                           create_parallel_shell_script,
+                                           genbash)
 from oasislmf.utils import diff
 
 TEST_DIRECTORY = os.path.dirname(__file__)
@@ -1098,23 +1100,26 @@ class Genbash_EventShuffle(Genbash):
             shutil.rmtree(cls.KPARSE_OUTPUT_FOLDER)
         os.makedirs(cls.KPARSE_OUTPUT_FOLDER)
 
-class Test_Create_Loss_Calculation(TestCase):
+
+
+class Test_Shell_Script_Creation(TestCase):
+    def check_files(self, reference_filename, output_filename):
+        """Compares the two provided files and fails the test if they are not identical."""
+        d = diff.unified_diff(reference_filename, output_filename, as_string=True)
+        if d:
+            self.fail(d)
+class Test_Create_Loss_Calculation(Test_Shell_Script_Creation):
     @classmethod
     def setUpClass(cls):
         # test dirs
         cls.OUTPUT_FOLDER = os.path.join(TEST_DIRECTORY, "loss_calculation_output")
         cls.REFERENCE_FOLDER = os.path.join(TEST_DIRECTORY, "loss_calculation_reference")
 
-    def check(self, reference_filename, output_filename):
-        d = diff.unified_diff(reference_filename, output_filename, as_string=True)
-        if d:
-            self.fail(d)
-
     def recreate_loss_calc_file(self, filename, loss_cmd):
         """Deletes the file if it exists and then creates a new one.
 
         :param filename: The name of the file to write the commands to
-        :param gul_cmd: The command that runs the  loss calculation.
+        :param loss_cmd: The command that runs the  loss calculation.
         """
 
         if os.path.exists(filename):
@@ -1124,8 +1129,32 @@ class Test_Create_Loss_Calculation(TestCase):
     def test_create_loss_calc_file(self):
         filename = "run_loss_calc.sh"
         command = "custom_loss_calculation"
-        print(os.path.join(self.OUTPUT_FOLDER, filename))
         self.recreate_loss_calc_file(os.path.join(self.OUTPUT_FOLDER, filename), command)
 
-        self.check(os.path.join(self.OUTPUT_FOLDER, filename),
+        self.check_files(os.path.join(self.OUTPUT_FOLDER, filename),
                    os.path.join(self.REFERENCE_FOLDER, filename))
+
+class Test_Create_Parallel_File(Test_Shell_Script_Creation):
+    @classmethod
+    def setUpClass(cls):
+        # test dirs
+        cls.OUTPUT_FOLDER = os.path.join(TEST_DIRECTORY, "GNU_Parallel_output")
+        cls.REFERENCE_FOLDER = os.path.join(TEST_DIRECTORY, "GNU_Parallel_reference")
+
+    def recreate_parallel_file(self, creation_function, filename):
+        """Deletes the file if it exists and then creates a new one.
+
+        :param filename: The name of the file to write the commands to
+        """
+
+        if os.path.exists(filename):
+            os.remove(filename)
+        create_parallel_shell_script(filename)
+
+    def test_create_loss_calc_file(self):
+        parallel_filename = "ktools_via_parallel.sh"
+        ktools_filename = "run_ktools.sh"
+        self.recreate_parallel_file(os.path.join(self.OUTPUT_FOLDER, ktools_filename))
+
+        self.check_files(os.path.join(self.OUTPUT_FOLDER, parallel_filename),
+                   os.path.join(self.REFERENCE_FOLDER, parallel_filename))

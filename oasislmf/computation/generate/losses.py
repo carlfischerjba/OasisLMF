@@ -16,7 +16,6 @@ import re
 import subprocess
 import sys
 import warnings
-
 from collections import OrderedDict
 from itertools import product
 from json import JSONDecodeError
@@ -555,7 +554,7 @@ class GenerateLosses(GenerateLossesDir):
         GenerateLossesDir._check_ktool_rules(self)
         model_run_fp = GenerateLossesDir._get_output_dir(self)
         analysis_settings = GenerateLossesDir.run(self)
-        script_fp = os.path.join(os.path.abspath(model_run_fp), 'run_ktools.sh')
+        script_fp = os.path.join(os.path.abspath(model_run_fp), 'ktools_via_parallel.sh')
         ri_layers = self._get_num_ri_layers(analysis_settings, model_run_fp)
         model_runner_module, package_name = self._get_model_runner()
 
@@ -993,7 +992,7 @@ class GenerateLossesDummyModel(GenerateDummyOasisFiles):
         self._write_summary_info_files()
         if self.ktools_num_processes == KTOOLS_NUM_PROCESSES:
             self.ktools_num_processes = multiprocessing.cpu_count()
-        script_fp = os.path.join(self.target_dir, 'run_ktools.sh')
+        script_fp = os.path.join(self.target_dir, 'ktools_via_parallel.sh')
         bash.genbash(
             max_process_id=self.ktools_num_processes,
             analysis_settings=self.analysis_settings,
