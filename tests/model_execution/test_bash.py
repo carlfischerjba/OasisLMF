@@ -1115,24 +1115,29 @@ class Test_Create_Loss_Calculation(Test_Shell_Script_Creation):
         cls.OUTPUT_FOLDER = os.path.join(TEST_DIRECTORY, "loss_calculation_output")
         cls.REFERENCE_FOLDER = os.path.join(TEST_DIRECTORY, "loss_calculation_reference")
 
-    def recreate_loss_calc_file(self, filename, loss_cmd):
+    def recreate_loss_calc_file(self, ktools_filename, losscalc_filename, loss_cmd):
         """Deletes the file if it exists and then creates a new one.
 
-        :param filename: The name of the file to write the commands to
-        :param loss_cmd: The command that runs the  loss calculation.
+        :param ktools_filename: The path to the run_ktools.sh script.
+        :param ktools_filename: The path of the losscalc script.
+        :param loss_cmd: The command that runs the loss calculation.
         """
-
-        if os.path.exists(filename):
-            os.remove(filename)
-        create_loss_calc_file(filename, loss_cmd)
+        # print(filename)
+        # raise
+        if os.path.exists(losscalc_filename):
+            os.remove(losscalc_filename)
+        create_loss_calc_file(ktools_filename, loss_cmd)
 
     def test_create_loss_calc_file(self):
-        filename = "run_loss_calc.sh"
+        ktools_filename = "run_loss_calc.sh"
+        losscalc_filename = "run_loss_calc.losscalc.sh"
         command = "custom_loss_calculation"
-        self.recreate_loss_calc_file(os.path.join(self.OUTPUT_FOLDER, filename), command)
+        self.recreate_loss_calc_file(os.path.join(self.OUTPUT_FOLDER, ktools_filename),
+                                     os.path.join(self.OUTPUT_FOLDER, losscalc_filename),
+                                     command)
 
-        self.check_files(os.path.join(self.OUTPUT_FOLDER, filename),
-                   os.path.join(self.REFERENCE_FOLDER, filename))
+        self.check_files(os.path.join(self.OUTPUT_FOLDER, losscalc_filename),
+                   os.path.join(self.REFERENCE_FOLDER, losscalc_filename))
 
 class Test_Create_Parallel_File(Test_Shell_Script_Creation):
     @classmethod
@@ -1151,7 +1156,7 @@ class Test_Create_Parallel_File(Test_Shell_Script_Creation):
             os.remove(filename)
         create_parallel_shell_script(filename)
 
-    def test_create_loss_calc_file(self):
+    def test_create_parallel_file(self):
         parallel_filename = "ktools_via_parallel.sh"
         ktools_filename = "run_ktools.sh"
         self.recreate_parallel_file(os.path.join(self.OUTPUT_FOLDER, ktools_filename))

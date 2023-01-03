@@ -242,7 +242,7 @@ def get_loss_calc_filepath_from_ktools_filepath(ktools_filepath):
     """
     loss_calc_filepath = os.path.relpath(str(os.path.dirname(os.path.abspath(ktools_filepath))), os.getcwd())
 
-    return loss_calc_filepath + get_loss_calc_filename_from_ktools_filepath(ktools_filepath)
+    return os.path.join(loss_calc_filepath, get_loss_calc_filename_from_ktools_filepath(ktools_filepath))
 
 def create_loss_calc_file(ktools_filepath, loss_cmd):
     """Creates a shell script to run a single loss calculation process.
@@ -251,6 +251,8 @@ def create_loss_calc_file(ktools_filepath, loss_cmd):
     :param gul_cmd: The command that runs the  loss calculation.
     """
     loss_calc_filepath = get_loss_calc_filepath_from_ktools_filepath(ktools_filepath)
+    # print(loss_calc_filepath)
+    # raise
     print_command(loss_calc_filepath, '#!/bin/bash')
     print_command(loss_calc_filepath, 'set -euET -o pipefail')
     # No warning as one is already provided by run_ktools.sh
