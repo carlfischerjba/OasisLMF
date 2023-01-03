@@ -1141,7 +1141,7 @@ class Test_Create_Parallel_File(Test_Shell_Script_Creation):
         cls.OUTPUT_FOLDER = os.path.join(TEST_DIRECTORY, "GNU_Parallel_output")
         cls.REFERENCE_FOLDER = os.path.join(TEST_DIRECTORY, "GNU_Parallel_reference")
 
-    def recreate_parallel_file(self, creation_function, filename):
+    def recreate_parallel_file(self, filename):
         """Deletes the file if it exists and then creates a new one.
 
         :param filename: The name of the file to write the commands to
