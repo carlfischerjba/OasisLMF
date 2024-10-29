@@ -1,7 +1,7 @@
 __all__ = [
-    'AbstractBasicKeyLookup',
-    'MultiprocLookupMixin',
-    'OasisBaseLookup',
+    "AbstractBasicKeyLookup",
+    "MultiprocLookupMixin",
+    "OasisBaseLookup",
 ]
 
 
@@ -10,19 +10,20 @@ __all__ = [
 import abc
 import itertools
 import json
+import logging
 import os
 import types
 
 import pandas as pd
 
-from ..utils.path import as_path
 from ..utils.exceptions import OasisException
+from ..utils.path import as_path
 
 UNKNOWN_ID = -1
 
 
-''' Basic abstract classes that facilitate the implementation of KeyLookupInterface  
-'''
+""" Basic abstract classes that facilitate the implementation of KeyLookupInterface
+"""
 
 
 class AbstractBasicKeyLookup:
@@ -31,14 +32,21 @@ class AbstractBasicKeyLookup:
     interface_version = "1"
 
     def __init__(self, config, config_dir=None, user_data_dir=None, output_dir=None):
+        logging.warning("### Initialising AbstractBasicKeyLookup ###")
         self.config = config
-        self.config_dir = config_dir or '.'
+        self.config_dir = config_dir or "."
         self.user_data_dir = user_data_dir
         self.output_dir = output_dir
 
-        keys_data_path = config.get('keys_data_path')
-        keys_data_path = os.path.join(config_dir, keys_data_path) if keys_data_path else ''
-        config['keys_data_path'] = as_path(keys_data_path, 'keys_data_path', preexists=(True if keys_data_path else False))
+        keys_data_path = config.get("keys_data_path")
+        keys_data_path = (
+            os.path.join(config_dir, keys_data_path) if keys_data_path else ""
+        )
+        config["keys_data_path"] = as_path(
+            keys_data_path,
+            "keys_data_path",
+            preexists=(True if keys_data_path else False),
+        )
 
     @abc.abstractmethod
     def process_locations(self, locations):
@@ -57,6 +65,9 @@ class MultiprocLookupMixin:
     """
 
     def process_locations_multiproc(self, loc_df_part):
+        logging.warning(
+            "### Running MultiprocLookupMixin.process_locations_multiproc ###"
+        )
         result = self.process_locations(loc_df_part)
         if isinstance(result, list) or isinstance(result, tuple):
             return pd.DataFrame(result)
@@ -65,7 +76,9 @@ class MultiprocLookupMixin:
         elif isinstance(result, pd.DataFrame):
             return result
         else:
-            raise OasisException("Unrecognised type for results: {type(results)}. expected ")
+            raise OasisException(
+                "Unrecognised type for results: {type(results)}. expected "
+            )
 
 
 class OasisBaseLookup(AbstractBasicKeyLookup, MultiprocLookupMixin):
@@ -74,48 +87,76 @@ class OasisBaseLookup(AbstractBasicKeyLookup, MultiprocLookupMixin):
     require lookup method to be implemented.
     Lookup will be call to create a key for each peril id and coverage type
     """
+
     multiproc_enabled = True
 
-    def __init__(self, config=None, config_json=None, config_fp=None, config_dir=None, user_data_dir=None, output_dir=None):
+    def __init__(
+        self,
+        config=None,
+        config_json=None,
+        config_fp=None,
+        config_dir=None,
+        user_data_dir=None,
+        output_dir=None,
+    ):
+        logging.warning("### Initialising OasisBaseLookup ###")
         if config:
-            config_dir = config_dir or '.'
+            config_dir = config_dir or "."
         elif config_json:
             config = json.loads(config_json)
-            config_dir = config_dir or '.'
+            config_dir = config_dir or "."
         elif config_fp:
             config_dir = config_dir or os.path.dirname(config_fp)
-            _config_fp = as_path(config_fp, 'config_fp')
-            with open(_config_fp, 'r', encoding='utf-8') as f:
+            _config_fp = as_path(config_fp, "config_fp")
+            with open(_config_fp, "r", encoding="utf-8") as f:
                 config = json.load(f)
 
-        super().__init__(config, config_dir=config_dir, user_data_dir=user_data_dir, output_dir=output_dir)
+        super().__init__(
+            config,
+            config_dir=config_dir,
+            user_data_dir=user_data_dir,
+            output_dir=output_dir,
+        )
 
-        peril_config = self.config.get('peril') or {}
+        peril_config = self.config.get("peril") or {}
 
-        self.peril_ids = tuple(peril_config.get('peril_ids') or ())
+        self.peril_ids = tuple(peril_config.get("peril_ids") or ())
 
-        self.peril_id_col = peril_config.get('peril_id_col') or 'peril_id'
+        self.peril_id_col = peril_config.get("peril_id_col") or "peril_id"
 
-        coverage_config = self.config.get('coverage') or {}
+        coverage_config = self.config.get("coverage") or {}
 
-        self.coverage_types = tuple(coverage_config.get('coverage_types') or ())
+        self.coverage_types = tuple(coverage_config.get("coverage_types") or ())
 
-        self.coverage_type_col = peril_config.get('coverage_type_col') or 'coverage_type'
+        self.coverage_type_col = (
+            peril_config.get("coverage_type_col") or "coverage_type"
+        )
 
-        self.config.setdefault('exposure', self.config.get('exposure') or self.config.get('locations') or {})
+        self.config.setdefault(
+            "exposure",
+            self.config.get("exposure") or self.config.get("locations") or {},
+        )
 
     def __tweak_config_data__(self):
-        for section in ('exposure', 'peril', 'vulnerability',):
+        for section in (
+            "exposure",
+            "peril",
+            "vulnerability",
+        ):
             section_config = self._config.get(section) or {}
             for k, v in section_config.items():
-                if isinstance(v, str) and '%%KEYS_DATA_PATH%%' in v:
-                    self._config[section][k] = v.replace('%%KEYS_DATA_PATH%%', self._config['keys_data_path'])
+                if isinstance(v, str) and "%%KEYS_DATA_PATH%%" in v:
+                    self._config[section][k] = v.replace(
+                        "%%KEYS_DATA_PATH%%", self._config["keys_data_path"]
+                    )
                 elif type(v) == list:
                     self._config[section][k] = tuple(v)
                 elif isinstance(v, dict):
                     for _k, _v in v.items():
-                        if isinstance(_v, str) and '%%KEYS_DATA_PATH%%' in _v:
-                            self._config[section][k][_k] = _v.replace('%%KEYS_DATA_PATH%%', self._config['keys_data_path'])
+                        if isinstance(_v, str) and "%%KEYS_DATA_PATH%%" in _v:
+                            self._config[section][k][_k] = _v.replace(
+                                "%%KEYS_DATA_PATH%%", self._config["keys_data_path"]
+                            )
 
     @property
     def config(self):
@@ -141,6 +182,7 @@ class OasisBaseLookup(AbstractBasicKeyLookup, MultiprocLookupMixin):
 
         Generates results using ``yield``.
         """
+        logging.warning("### Running OasisBaseLookup.process_locations ###")
         locs_seq = None
 
         if isinstance(locs, list) or isinstance(locs, tuple):
@@ -152,5 +194,7 @@ class OasisBaseLookup(AbstractBasicKeyLookup, MultiprocLookupMixin):
         elif isinstance(locs, pd.DataFrame):
             locs_seq = (loc for _, loc in locs.iterrows())
 
-        for loc, peril_id, coverage_type in itertools.product(locs_seq, self.peril_ids, self.coverage_types):
+        for loc, peril_id, coverage_type in itertools.product(
+            locs_seq, self.peril_ids, self.coverage_types
+        ):
             yield self.lookup(loc, peril_id, coverage_type)
